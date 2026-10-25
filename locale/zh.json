@@ -1,0 +1,14 @@
+{
+  "editResend": {
+    "bubble.edit": "编辑并重跑",
+    "editor.title": "编辑这条消息",
+    "editor.hint": "将从这条消息处 fork 出一个新会话：之前的上下文原样保留（可命中缓存），之后的内容不带入，编辑后的文本作为新消息重新发送。",
+    "editor.placeholder": "输入新的消息内容…",
+    "editor.cancel": "取消",
+    "editor.submit": "Fork 并重跑",
+    "editor.submitting": "正在 fork…",
+    "notice.forkFailed": "Fork 失败：{message}",
+    "notice.sendFailed": "重发失败：{message}",
+    "notice.done": "已从这条消息处 fork 出新会话并重跑。"
+  }
+}

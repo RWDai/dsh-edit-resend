@@ -1,0 +1,55 @@
+{
+  "name": "dsh-edit-resend",
+  "version": "0.1.0",
+  "private": false,
+  "description": "DSH 插件：编辑历史用户消息并从该处重跑——fork 出事件前缀一致的子会话后立即重发编辑文本，模型可见前缀不变，供应商 prompt cache 可命中",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./locale/*.json": "./locale/*.json",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-api-session-controller",
+        "@deepseek-ai/dsh-client-ui-primitives"
+      ]
+    }
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "edit",
+    "resend",
+    "fork",
+    "branch",
+    "prompt-cache"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RWDai/dsh-edit-resend.git"
+  },
+  "homepage": "https://github.com/RWDai/dsh-edit-resend#readme",
+  "bugs": {
+    "url": "https://github.com/RWDai/dsh-edit-resend/issues"
+  },
+  "files": [
+    "lib",
+    "locale/*.json"
+  ]
+}
