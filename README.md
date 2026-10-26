@@ -43,3 +43,19 @@ dsh-edit-resend/
 - 缓存命中以供应商实际行为为准：前缀逐字节一致是必要条件，TTL、配额、供应商侧是否按前缀计费由它自己决定。fork 本身不产生模型请求，重发的那一条才是新请求。
 - fork 是**新会话**：原会话的未读、钉选等状态不跟随；子会话继承工作区（workspace）与 cwd。
 - 与官方「分支」按钮（turn 尾部的 fork）的区别：那个从 turn 结束处复制，不带新消息；这个在**你指定的用户消息**处切，并立刻以编辑后的文本重跑。
+
+## 兼容性
+
+0.1.1 修复了一处会让 **web 整体起不来**的激活错误，升级务必覆盖旧版。
+
+动态插件拿到的 `ctx` 是受守卫的代理：读取任何没有写进 `exports.inject` 的服务都会直接抛错，并被记为包激活失败。0.1.0 在 `apply` 里读了 `ctx.uiWorkspace` 却没声明它，于是插件在激活阶段就抛错，页面随之白屏。0.1.1 的修法：
+
+```js
+exports.inject = ["slots", "locale", "sessions", "uiWorkspace"];
+```
+
+同一次修复还纠正了两处 API 误用（0.1.0 里功能其实也跑不通）：
+
+- `binding(id)` 的返回值**没有** `prompt`。fork 只把子会话写进目录、不持有引用，而 `binding()` 对没有活跃引用的世代返回 `undefined`。正确顺序是 `retain` → 等 `reference.ready` → `binding.session.prompt(...)`。
+- `useSessions` 是**选择器 hook**（`SnapshotSelectorHook`），不是服务本体；服务走 `ctx.sessions`。组件里真正可用的是标准 prop `useAccess`（权限查询）。
+
