@@ -36,7 +36,7 @@ dsh-edit-resend/
   locale/*.json        zh/en 文案
 ```
 
-浏览器半覆盖 `conversation.chat.node` 插槽的 `user` 键（keyed 插槽同格按 priority 升序取第一个渲染，动态注册分到负数 priority，稳定压过内置视图），只增强不破坏：文本用公开原语 `MarkdownText` 重绘，视觉对齐官方气泡。
+浏览器半覆盖 `conversation.chat.node` 插槽的 `user` 键（keyed 插槽同格按 priority 升序取第一个渲染，动态注册分到负数 priority，稳定压过内置视图），**只加动作、不重画内容**：气泡本体（Markdown / 图片 / 附件 / 引用标签 / 额外块）一律通过 `renderFactorySlot("conversation.chat.user.content", …)` 交回内置工厂，本插件只在外层补时间、复制与「编辑并重跑」三枚动作。
 
 ## 注意
 
@@ -46,7 +46,18 @@ dsh-edit-resend/
 
 ## 兼容性
 
-0.1.1 修复了一处会让 **web 整体起不来**的激活错误，升级务必覆盖旧版。
+**升级务必覆盖旧版：0.1.0 会让 web 起不来，0.1.1 会让所有用户消息看不见。**
+
+### 0.1.2：覆盖内置渲染器只能"包壳"
+
+0.1.1 的渲染器用 `IconEditOutline16` 画按钮，而 primitives 只导出 `IconEditOutlineRegular` / `IconEditOutlineMedium`。`React.createElement(undefined)` 在渲染期抛错，插槽错误边界接住后渲染成空的 `<div data-slot-error>`，聊天流又有 `[data-chat-flow-item]:empty{height:0}` 的折叠规则 —— 于是**每一条用户消息都变成 0 高度，看起来像被删了**。
+
+教训有两条：
+
+- 覆盖 keyed 插槽时**不要自己重画内容**。DSH 的用户气泡不是一段 Markdown，而是内置工厂 `conversation.chat.user.content` 的输出（文本、图片、附件卡片、引用标签、额外块）。自行用 primitives 拼只会在上游改名时静默炸掉整行。现在内容一律 `renderFactorySlot(...)` 交回内置工厂，插件只负责外层动作行。
+- 引用 primitives 一律容错：`glyph(Component, fallback)` / `tooltip(label, child)` 在成员缺失时降级成文字或裸按钮，绝不把 `undefined` 交给 `createElement`。`test-client.mjs` 用最小 React 垫片遍历渲染树，专门断言"没有 undefined 元素类型"。
+
+### 0.1.1：动态插件必须声明所有根级服务
 
 动态插件拿到的 `ctx` 是受守卫的代理：读取任何没有写进 `exports.inject` 的服务都会直接抛错，并被记为包激活失败。0.1.0 在 `apply` 里读了 `ctx.uiWorkspace` 却没声明它，于是插件在激活阶段就抛错，页面随之白屏。0.1.1 的修法：
 

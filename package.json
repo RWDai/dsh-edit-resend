@@ -1,6 +1,6 @@
 {
   "name": "dsh-edit-resend",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": false,
   "description": "DSH 插件：编辑历史用户消息并从该处重跑——fork 出事件前缀一致的子会话后立即重发编辑文本，模型可见前缀不变，供应商 prompt cache 可命中",
   "type": "module",

@@ -1,14 +1,18 @@
 {
   "editResend": {
     "bubble.edit": "Edit & rerun",
+    "bubble.copy": "Copy",
+    "bubble.copied": "Copied",
     "editor.title": "Edit this message",
     "editor.hint": "Forks a new session at this message: everything before it is kept verbatim (cache-friendly), nothing after it is carried over, and the edited text is sent as the next message.",
+    "editor.nonTextOnly": "Note: this message carries images/attachments; only its text part is resent.",
     "editor.placeholder": "Type the new message…",
     "editor.cancel": "Cancel",
     "editor.submit": "Fork & rerun",
     "editor.submitting": "Forking…",
     "notice.forkFailed": "Fork failed: {message}",
     "notice.sendFailed": "Resend failed: {message}",
-    "notice.done": "Forked a new session from this message and reran it."
+    "notice.done": "Forked a new session from this message and reran it.",
+    "editor.failed": "Failed, please retry"
   }
 }
