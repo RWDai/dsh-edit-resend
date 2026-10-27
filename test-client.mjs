@@ -97,6 +97,15 @@ function collect(tree, predicate) {
 	return hits;
 }
 
+/** 收集命中谓词的渲染节点本身（不是路径）。 */
+function findAll(tree, predicate) {
+	const hits = [];
+	walk(tree, (node) => {
+		if (node !== null && typeof node === "object" && node.__element === true && predicate(node)) hits.push(node);
+	});
+	return hits;
+}
+
 function texts(tree) {
 	const out = [];
 	walk(tree, (node) => {
@@ -122,6 +131,7 @@ function render(mod, overrides = {}, faces = {}) {
 		t: (key) => `[${key}]`,
 		sessionId: "session-1",
 		useAccess: () => true,
+		useChat: (selector) => selector({ timeline: { turns: new Map() } }),
 		loadImage: () => undefined,
 		renderFactorySlot: (name, input) => {
 			calls.push({ name, input });
@@ -215,7 +225,7 @@ console.log("\n# editAndResend");
 	check("成功路径 ok", happy.ok === true && happy.childId === "child-1", JSON.stringify(happy));
 	check("成功路径顺序 fork→retain→prompt→open→release", JSON.stringify(events.map((e) => e[0])) === JSON.stringify(["fork", "retain", "prompt", "open", "release"]), JSON.stringify(events.map((e) => e[0])));
 	check("prompt 用 queue 且只发文本", JSON.stringify(events[2][1]) === JSON.stringify([{ type: "text", text: "改过的文本" }]) && events[2][2] === "queue");
-	check("fork 边界是消息自身 seq", events[0][1].atSeq === 41 && events[0][1].sessionId === "session-1");
+	check("fork 使用调用方给的边界", events[0][1].atSeq === 41 && events[0][1].sessionId === "session-1");
 
 	events.length = 0;
 	const forkFailed = await editAndResend(makeSessions({ forkError: "forbidden" }), workspace, "session-1", 41, "x");
@@ -233,6 +243,65 @@ console.log("\n# editAndResend");
 
 	const navigationThrows = await editAndResend(makeSessions(), { openSession: () => { throw new Error("nav boom"); } }, "session-1", 41, "x");
 	check("导航异常不影响成功结果", navigationThrows.ok === true, JSON.stringify(navigationThrows));
+}
+
+console.log("\n# fork 边界（previousTurnEnd）");
+{
+	const mod = loadModule(primitives);
+	const { previousTurnEnd } = mod.__internals;
+	const turns = new Map([
+		[1, { turn: 1, start: { seq: 4 }, end: { seq: 2481 } }],
+		[2, { turn: 2, start: { seq: 2483 }, end: undefined }],
+	]);
+	const snapshot = { timeline: { turns } };
+	check("切到上一个 turn 的 end", previousTurnEnd(snapshot, 2486) === 2481, String(previousTurnEnd(snapshot, 2486)));
+	check("第一轮没有上一 turn 时退化 seq-1", previousTurnEnd(snapshot, 8) === 7, String(previousTurnEnd(snapshot, 8)));
+	check("快照缺席时退化 seq-1", previousTurnEnd(undefined, 2486) === 2485, String(previousTurnEnd(undefined, 2486)));
+	check("seq 为 0 不越界", previousTurnEnd(undefined, 0) === 0, String(previousTurnEnd(undefined, 0)));
+	check("目标 turn 自己的 end 不被选中", previousTurnEnd({ timeline: { turns: new Map([[1, { end: { seq: 5 } }], [2, { end: { seq: 100 } }]]) } }, 50) === 5);
+	check("多轮取最大的早于目标者", previousTurnEnd({ timeline: { turns: new Map([[1, { end: { seq: 5 } }], [2, { end: { seq: 30 } }], [3, { end: { seq: 90 } }]]) } }, 50) === 30);
+}
+
+console.log("\n# 编辑浮层提交（用快照算边界）");
+{
+	const mod = loadModule(primitives);
+	const { EditOverlay } = mod.__internals;
+	const turns = new Map([
+		[1, { turn: 1, start: { seq: 4 }, end: { seq: 2481 } }],
+		[2, { turn: 2, start: { seq: 2483 }, end: undefined }],
+	]);
+	const received = [];
+	const tree = EditOverlay({
+		initialText: "改过的文本",
+		nonText: false,
+		seq: 2486,
+		useChat: (selector) => selector({ timeline: { turns } }),
+		onSubmit: (text, atSeq) => { received.push([text, atSeq]); return Promise.resolve(); },
+		onClose: () => {},
+		t: (key) => `[${key}]`,
+	});
+	assertRenderable("浮层渲染", tree);
+	const submitButton = findAll(tree, (n) => typeof n.props?.className === "string" && n.props.className.includes("dshER_btnPrimary"))[0];
+	check("浮层有提交按钮", submitButton !== undefined);
+	submitButton.props.onClick();
+	await new Promise((resolve) => setTimeout(resolve, 0));
+	check("提交回传编辑文本与 turn 边界", JSON.stringify(received) === JSON.stringify([["改过的文本", 2481]]), JSON.stringify(received));
+
+	const receivedNoChat = [];
+	const noChat = EditOverlay({
+		initialText: "x",
+		nonText: false,
+		seq: 2486,
+		useChat: undefined,
+		onSubmit: (text, atSeq) => { receivedNoChat.push([text, atSeq]); return Promise.resolve(); },
+		onClose: () => {},
+		t: (key) => `[${key}]`,
+	});
+	assertRenderable("useChat 缺席时的浮层", noChat);
+	const submit2 = findAll(noChat, (n) => typeof n.props?.className === "string" && n.props.className.includes("dshER_btnPrimary"))[0];
+	submit2.props.onClick();
+	await new Promise((resolve) => setTimeout(resolve, 0));
+	check("useChat 缺席时退化到 seq-1", JSON.stringify(receivedNoChat) === JSON.stringify([["x", 2485]]), JSON.stringify(receivedNoChat));
 }
 
 console.log("\n# 纯函数");
